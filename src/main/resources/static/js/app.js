@@ -6,7 +6,6 @@ const searchInput = document.getElementById("search");
 
 let selectedBook = null;
 
-// === Hent og vis bøger ===
 function loadBooks(query = "books") {
     fetch(`/api/books?q=${encodeURIComponent(query)}`)
         .then(r => r.json())
@@ -14,7 +13,6 @@ function loadBooks(query = "books") {
         .catch(err => console.error("Fejl ved hentning af bøger:", err));
 }
 
-// === Vis bøger (maks 12) ===
 function renderBooks(books) {
     bookGrid.innerHTML = "";
     books.slice(0, 12).forEach(b => {
@@ -26,13 +24,11 @@ function renderBooks(books) {
     });
 }
 
-// === Søg ===
 searchInput.addEventListener("input", () => {
     const query = searchInput.value.trim() || "books";
     loadBooks(query);
 });
 
-// === Åbn chat ===
 function openChat(book) {
     selectedBook = book;
     chatContainer.classList.add("visible");
@@ -42,7 +38,6 @@ function openChat(book) {
   `;
 }
 
-// === Luk chat ===
 document.addEventListener("click", e => {
     if (e.target.id === "close-chat") {
         chatContainer.classList.remove("visible");
@@ -52,7 +47,6 @@ document.addEventListener("click", e => {
     }
 });
 
-// === Tilføj “AI is typing…” indikator ===
 function showTypingIndicator() {
     const typingDiv = document.createElement("div");
     typingDiv.classList.add("typing-indicator");
@@ -62,7 +56,6 @@ function showTypingIndicator() {
     return typingDiv;
 }
 
-// === Simuler skrivning af AI’s svar ===
 function typeWriterEffect(element, text, speed = 25) {
     let i = 0;
     const interval = setInterval(() => {
@@ -76,7 +69,6 @@ function typeWriterEffect(element, text, speed = 25) {
     }, speed);
 }
 
-// === Send spørgsmål ===
 chatInput.addEventListener("keydown", e => {
     if (e.key === "Enter" && chatInput.value.trim() !== "" && selectedBook) {
         const question = chatInput.value;
@@ -105,5 +97,4 @@ chatInput.addEventListener("keydown", e => {
     }
 });
 
-// === Start med engelske bøger ===
 loadBooks();
