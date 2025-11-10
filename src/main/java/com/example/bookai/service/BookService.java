@@ -21,26 +21,54 @@ public class BookService {
     }
 
     public Mono<List<BookDTO>> searchBooks(String query) {
-        return webClient.get()
+        String finalQuery = (query == null || query.isBlank()) ? "books" : query;
+
+        Mono<GoogleBooksResponse> firstPage = webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/volumes")
-                        .queryParam("q", query)
-                        .queryParam("maxResults", 20)
-                        .queryParam("langRestrict", "en","dk")
+                        .queryParam("q", finalQuery)
+                        .queryParam("startIndex", 0)
+                        .queryParam("maxResults", 10)
+                        .queryParam("langRestrict", "en")
+                        .queryParam("printType", "books")
                         .queryParam("key", apiKey)
                         .build())
                 .retrieve()
-                .bodyToMono(GoogleBooksResponse.class)
-                .map(response -> response.getItems().stream()
-                        .map(item -> new BookDTO(
-                                item.getId(),
-                                item.getVolumeInfo().getTitle(),
-                                item.getVolumeInfo().getImageLinks() != null
-                                        ? item.getVolumeInfo().getImageLinks().getThumbnail()
-                                        : ""
-                        ))
-                        .collect(Collectors.toList()));
+                .bodyToMono(GoogleBooksResponse.class);
+
+        Mono<GoogleBooksResponse> secondPage = webClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/volumes")
+                        .queryParam("q", finalQuery)
+                        .queryParam("startIndex", 10)
+                        .queryParam("maxResults", 10)
+                        .queryParam("langRestrict", "en")
+                        .queryParam("printType", "books")
+                        .queryParam("key", apiKey)
+                        .build())
+                .retrieve()
+                .bodyToMono(GoogleBooksResponse.class);
+
+        return Mono.zip(firstPage, secondPage)
+                .map(tuple -> {
+                    List<Item> allItems = new java.util.ArrayList<>();
+                    allItems.addAll(tuple.getT1().getItems());
+                    allItems.addAll(tuple.getT2().getItems());
+
+                    return allItems.stream()
+                            .limit(12) // viser kun 12
+                            .map(item -> new BookDTO(
+                                    item.getId(),
+                                    item.getVolumeInfo().getTitle(),
+                                    item.getVolumeInfo().getImageLinks() != null
+                                            ? item.getVolumeInfo().getImageLinks().getThumbnail()
+                                            : ""
+                            ))
+                            .collect(Collectors.toList());
+                });
     }
+
+
 
     public Mono<BookDTO> getBookById(String id) {
         return webClient.get()
@@ -59,6 +87,7 @@ public class BookService {
                 ));
     }
 
+    // === Response DTO'er til Google Books ===
     private static class GoogleBooksResponse {
         private List<Item> items;
         public List<Item> getItems() { return items == null ? List.of() : items; }
