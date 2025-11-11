@@ -6,6 +6,13 @@ const searchInput = document.getElementById("search");
 
 let selectedBook = null;
 
+function scrollChatToBottom() {
+    // bruger requestAnimationFrame, så scroll sker EFTER DOM opdateres
+    requestAnimationFrame(() => {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+}
+
 function loadBooks(query = "books") {
     fetch(`/api/books?q=${encodeURIComponent(query)}`)
         .then(r => r.json())
@@ -20,15 +27,20 @@ function renderBooks(books) {
         div.classList.add("book");
 
         div.innerHTML = `
-            <img src="${b.imageUrl}" alt="${b.title}" />
+            <div class="book-image-wrapper">
+                <img src="${b.imageUrl}" alt="${b.title}" />
+                <button class="info-btn" title="Book info" data-id="${b.id}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="#1a73e8" width="16" height="16">
+                        <circle cx="12" cy="12" r="10" stroke="#1a73e8" stroke-width="1.5"></circle>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8h.01M11 12h1v4h1" />
+                    </svg>
+                </button>
+            </div>
             <p>${b.title}</p>
-            <button class="info-btn" data-id="${b.id}">ℹ️</button>
         `;
 
-        // Klik på bogbillede åbner chat
         div.querySelector("img").onclick = () => openChat(b);
 
-        // Klik på info åbner modal
         div.querySelector(".info-btn").onclick = (e) => {
             e.stopPropagation();
             openBookInfoModal(b.id);
@@ -38,8 +50,6 @@ function renderBooks(books) {
     });
 }
 
-
-// === Søg ===
 searchInput.addEventListener("input", () => {
     const query = searchInput.value.trim() || "books";
     loadBooks(query);
@@ -61,13 +71,14 @@ function openChat(book) {
     aiMessage.classList.add("chat-message", "ai");
     aiMessage.innerHTML = `<b>${book.title}</b><br>Hello! What would you like to know about this book?`;
     chatBox.appendChild(aiMessage);
+
+    scrollChatToBottom();
 }
 
 document.addEventListener("click", e => {
     if (e.target.id === "close-chat") {
         chatContainer.classList.remove("visible");
 
-        // Vis placeholder igen
         const placeholder = document.getElementById("chat-placeholder");
         if (placeholder) placeholder.classList.remove("hidden");
 
@@ -83,7 +94,7 @@ function showTypingIndicator() {
     typingDiv.classList.add("typing-indicator");
     typingDiv.innerHTML = "<span></span><span></span><span></span>";
     chatBox.appendChild(typingDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    scrollChatToBottom();
     return typingDiv;
 }
 
@@ -93,7 +104,7 @@ function typeWriterEffect(element, text, speed = 25) {
         if (i < text.length) {
             element.innerHTML += text.charAt(i);
             i++;
-            chatBox.scrollTop = chatBox.scrollHeight;
+            scrollChatToBottom();
         } else {
             clearInterval(interval);
         }
@@ -104,14 +115,12 @@ chatInput.addEventListener("keydown", e => {
     if (e.key === "Enter" && chatInput.value.trim() !== "" && selectedBook) {
         const question = chatInput.value.trim();
 
-        // Tilføj bruger-besked som boble
         const userMsg = document.createElement("div");
         userMsg.classList.add("chat-message", "user");
         userMsg.innerHTML = `<b>You:</b> ${question}`;
         chatBox.appendChild(userMsg);
-
         chatInput.value = "";
-        chatBox.scrollTop = chatBox.scrollHeight;
+        scrollChatToBottom();
 
         const typingIndicator = showTypingIndicator();
 
@@ -136,6 +145,7 @@ chatInput.addEventListener("keydown", e => {
                 errorMsg.style.color = "#b33";
                 errorMsg.innerHTML = `<b>Error:</b> Could not get a response.`;
                 chatBox.appendChild(errorMsg);
+                scrollChatToBottom();
             });
     }
 });
