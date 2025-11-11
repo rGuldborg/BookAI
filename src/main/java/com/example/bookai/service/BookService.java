@@ -21,7 +21,12 @@ public class BookService {
     }
 
     public Mono<List<BookDTO>> searchBooks(String query) {
-        String finalQuery = (query == null || query.isBlank()) ? "books" : query;
+        String finalQuery;
+        if (query == null || query.isBlank() || query.equalsIgnoreCase("books")) {
+            finalQuery = "harry potter OR hunger games OR lord of the rings OR davinci mystery";
+        } else {
+            finalQuery = query;
+        }
 
         Mono<GoogleBooksResponse> firstPage = webClient.get()
                 .uri(uriBuilder -> uriBuilder

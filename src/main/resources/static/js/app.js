@@ -7,7 +7,6 @@ const searchInput = document.getElementById("search");
 let selectedBook = null;
 
 function scrollChatToBottom() {
-    // bruger requestAnimationFrame, så scroll sker EFTER DOM opdateres
     requestAnimationFrame(() => {
         chatBox.scrollTop = chatBox.scrollHeight;
     });

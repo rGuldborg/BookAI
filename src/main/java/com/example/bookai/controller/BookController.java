@@ -18,7 +18,7 @@ public class BookController {
     }
 
     @GetMapping
-    public Mono<List<BookDTO>> getBooks(@RequestParam(defaultValue = "books") String q) {
+    public Mono<List<BookDTO>> getBooks(@RequestParam(defaultValue = "bestsellers") String q) {
         return bookService.searchBooks(q);
     }
 
