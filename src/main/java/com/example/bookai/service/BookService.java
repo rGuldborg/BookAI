@@ -56,19 +56,25 @@ public class BookService {
                     allItems.addAll(tuple.getT2().getItems());
 
                     return allItems.stream()
-                            .limit(12) // viser kun 12
-                            .map(item -> new BookDTO(
-                                    item.getId(),
-                                    item.getVolumeInfo().getTitle(),
-                                    item.getVolumeInfo().getImageLinks() != null
-                                            ? item.getVolumeInfo().getImageLinks().getThumbnail()
-                                            : ""
-                            ))
+                            .limit(12)
+                            .map(item -> {
+                                VolumeInfo info = item.getVolumeInfo();
+                                return new BookDTO(
+                                        item.getId(),
+                                        info.getTitle() != null ? info.getTitle() : "Unknown title",
+                                        (info.getImageLinks() != null && info.getImageLinks().getThumbnail() != null)
+                                                ? info.getImageLinks().getThumbnail()
+                                                : "",
+                                        (info.getAuthors() != null && !info.getAuthors().isEmpty())
+                                                ? String.join(", ", info.getAuthors())
+                                                : "Unknown author",
+                                        info.getPublishedDate() != null ? info.getPublishedDate() : "Unknown",
+                                        info.getDescription() != null ? info.getDescription() : "No description available"
+                                );
+                            })
                             .collect(Collectors.toList());
                 });
     }
-
-
 
     public Mono<BookDTO> getBookById(String id) {
         return webClient.get()
@@ -78,16 +84,23 @@ public class BookService {
                         .build(id))
                 .retrieve()
                 .bodyToMono(GoogleBookDetail.class)
-                .map(book -> new BookDTO(
-                        book.getId(),
-                        book.getVolumeInfo().getTitle(),
-                        book.getVolumeInfo().getImageLinks() != null
-                                ? book.getVolumeInfo().getImageLinks().getThumbnail()
-                                : ""
-                ));
+                .map(book -> {
+                    VolumeInfo info = book.getVolumeInfo();
+                    return new BookDTO(
+                            book.getId(),
+                            info.getTitle() != null ? info.getTitle() : "Unknown title",
+                            (info.getImageLinks() != null && info.getImageLinks().getThumbnail() != null)
+                                    ? info.getImageLinks().getThumbnail()
+                                    : "",
+                            (info.getAuthors() != null && !info.getAuthors().isEmpty())
+                                    ? String.join(", ", info.getAuthors())
+                                    : "Unknown author",
+                            info.getPublishedDate() != null ? info.getPublishedDate() : "Unknown",
+                            info.getDescription() != null ? info.getDescription() : "No description available"
+                    );
+                });
     }
 
-    // === Response DTO'er til Google Books ===
     private static class GoogleBooksResponse {
         private List<Item> items;
         public List<Item> getItems() { return items == null ? List.of() : items; }
@@ -109,8 +122,15 @@ public class BookService {
 
     private static class VolumeInfo {
         private String title;
+        private List<String> authors;
+        private String publishedDate;
+        private String description;
         private ImageLinks imageLinks;
+
         public String getTitle() { return title; }
+        public List<String> getAuthors() { return authors; }
+        public String getPublishedDate() { return publishedDate; }
+        public String getDescription() { return description; }
         public ImageLinks getImageLinks() { return imageLinks; }
     }
 

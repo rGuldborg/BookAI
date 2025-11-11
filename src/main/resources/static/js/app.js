@@ -18,12 +18,28 @@ function renderBooks(books) {
     books.slice(0, 12).forEach(b => {
         const div = document.createElement("div");
         div.classList.add("book");
-        div.innerHTML = `<img src="${b.imageUrl}" alt="${b.title}" /><p>${b.title}</p>`;
-        div.onclick = () => openChat(b);
+
+        div.innerHTML = `
+            <img src="${b.imageUrl}" alt="${b.title}" />
+            <p>${b.title}</p>
+            <button class="info-btn" data-id="${b.id}">ℹ️</button>
+        `;
+
+        // Klik på bogbillede åbner chat
+        div.querySelector("img").onclick = () => openChat(b);
+
+        // Klik på info åbner modal
+        div.querySelector(".info-btn").onclick = (e) => {
+            e.stopPropagation();
+            openBookInfoModal(b.id);
+        };
+
         bookGrid.appendChild(div);
     });
 }
 
+
+// === Søg ===
 searchInput.addEventListener("input", () => {
     const query = searchInput.value.trim() || "books";
     loadBooks(query);
@@ -32,18 +48,33 @@ searchInput.addEventListener("input", () => {
 function openChat(book) {
     selectedBook = book;
     chatContainer.classList.add("visible");
-    chatBox.innerHTML = `
-    <p><b>${book.title}</b></p>
-    <p>Hello! What would you like to know about this book?</p>
-  `;
+
+    const placeholder = document.getElementById("chat-placeholder");
+    if (placeholder) placeholder.classList.add("hidden");
+
+    chatInput.style.display = "block";
+    document.getElementById("close-chat").style.display = "block";
+
+    chatBox.innerHTML = "";
+
+    const aiMessage = document.createElement("div");
+    aiMessage.classList.add("chat-message", "ai");
+    aiMessage.innerHTML = `<b>${book.title}</b><br>Hello! What would you like to know about this book?`;
+    chatBox.appendChild(aiMessage);
 }
 
 document.addEventListener("click", e => {
     if (e.target.id === "close-chat") {
         chatContainer.classList.remove("visible");
-        setTimeout(() => {
-            chatBox.innerHTML = "";
-        }, 300);
+
+        // Vis placeholder igen
+        const placeholder = document.getElementById("chat-placeholder");
+        if (placeholder) placeholder.classList.remove("hidden");
+
+        chatBox.innerHTML = "";
+        e.target.style.display = "none";
+        chatInput.style.display = "none";
+        selectedBook = null;
     }
 });
 
@@ -71,9 +102,16 @@ function typeWriterEffect(element, text, speed = 25) {
 
 chatInput.addEventListener("keydown", e => {
     if (e.key === "Enter" && chatInput.value.trim() !== "" && selectedBook) {
-        const question = chatInput.value;
-        chatBox.innerHTML += `<p><b>You:</b> ${question}</p>`;
+        const question = chatInput.value.trim();
+
+        // Tilføj bruger-besked som boble
+        const userMsg = document.createElement("div");
+        userMsg.classList.add("chat-message", "user");
+        userMsg.innerHTML = `<b>You:</b> ${question}`;
+        chatBox.appendChild(userMsg);
+
         chatInput.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
 
         const typingIndicator = showTypingIndicator();
 
@@ -83,16 +121,21 @@ chatInput.addEventListener("keydown", e => {
                 typingIndicator.remove();
 
                 const answer = data?.choices?.[0]?.message?.content || "Sorry, I couldn’t find an answer.";
-                const aiMessage = document.createElement("p");
-                aiMessage.innerHTML = "<b>AI:</b> ";
-                chatBox.appendChild(aiMessage);
+                const aiMsg = document.createElement("div");
+                aiMsg.classList.add("chat-message", "ai");
+                aiMsg.innerHTML = "<b>AI:</b> ";
+                chatBox.appendChild(aiMsg);
 
-                typeWriterEffect(aiMessage, " " + answer);
+                typeWriterEffect(aiMsg, " " + answer);
             })
             .catch(err => {
                 typingIndicator.remove();
                 console.error("Fejl i chat:", err);
-                chatBox.innerHTML += `<p style="color:#b33"><b>Error:</b> Could not get a response.</p>`;
+                const errorMsg = document.createElement("div");
+                errorMsg.classList.add("chat-message", "ai");
+                errorMsg.style.color = "#b33";
+                errorMsg.innerHTML = `<b>Error:</b> Could not get a response.`;
+                chatBox.appendChild(errorMsg);
             });
     }
 });
