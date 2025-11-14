@@ -16,7 +16,10 @@ public class ChatController {
     }
 
     @GetMapping
-    public Mono<ChatResponseDTO> chat(@RequestParam String book, @RequestParam String question) {
+    public Mono<ChatResponseDTO> chat(
+            @RequestParam String book,
+            @RequestParam String question
+    ) {
         return openAIService.askAboutBook(book, question);
     }
 }

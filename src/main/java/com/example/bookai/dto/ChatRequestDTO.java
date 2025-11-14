@@ -19,10 +19,20 @@ public class ChatRequestDTO {
             this.content = content;
         }
 
-        public String getRole() { return role; }
-        public String getContent() { return content; }
+        public String getRole() {
+            return role;
+        }
+
+        public String getContent() {
+            return content;
+        }
     }
 
-    public String getModel() { return model; }
-    public Message[] getMessages() { return messages; }
+    public String getModel() {
+        return model;
+    }
+
+    public Message[] getMessages() {
+        return messages;
+    }
 }

@@ -12,11 +12,14 @@ function scrollChatToBottom() {
     });
 }
 
+function api(url) {
+    return fetch(url).then(r => r.json());
+}
+
 function loadBooks(query = "books") {
-    fetch(`/api/books?q=${encodeURIComponent(query)}`)
-        .then(r => r.json())
+    api(`/api/books?q=${encodeURIComponent(query)}`)
         .then(renderBooks)
-        .catch(err => console.error("Fejl ved hentning af bøger:", err));
+        .catch(err => console.error("Error fetching books:", err));
 }
 
 function renderBooks(books) {
@@ -24,7 +27,6 @@ function renderBooks(books) {
     books.slice(0, 12).forEach(b => {
         const div = document.createElement("div");
         div.classList.add("book");
-
         div.innerHTML = `
             <div class="book-image-wrapper">
                 <img src="${b.imageUrl}" alt="${b.title}" />
@@ -39,8 +41,7 @@ function renderBooks(books) {
         `;
 
         div.querySelector("img").onclick = () => openChat(b);
-
-        div.querySelector(".info-btn").onclick = (e) => {
+        div.querySelector(".info-btn").onclick = e => {
             e.stopPropagation();
             openBookInfoModal(b.id);
         };
@@ -57,13 +58,10 @@ searchInput.addEventListener("input", () => {
 function openChat(book) {
     selectedBook = book;
     chatContainer.classList.add("visible");
-
     const placeholder = document.getElementById("chat-placeholder");
     if (placeholder) placeholder.classList.add("hidden");
-
     chatInput.style.display = "block";
     document.getElementById("close-chat").style.display = "block";
-
     chatBox.innerHTML = "";
 
     const aiMessage = document.createElement("div");
@@ -77,10 +75,8 @@ function openChat(book) {
 document.addEventListener("click", e => {
     if (e.target.id === "close-chat") {
         chatContainer.classList.remove("visible");
-
         const placeholder = document.getElementById("chat-placeholder");
         if (placeholder) placeholder.classList.remove("hidden");
-
         chatBox.innerHTML = "";
         e.target.style.display = "none";
         chatInput.style.display = "none";
@@ -97,56 +93,52 @@ function showTypingIndicator() {
     return typingDiv;
 }
 
-function typeWriterEffect(element, text, speed = 25) {
-    let i = 0;
-    const interval = setInterval(() => {
-        if (i < text.length) {
-            element.innerHTML += text.charAt(i);
-            i++;
-            scrollChatToBottom();
-        } else {
-            clearInterval(interval);
-        }
-    }, speed);
+async function typeText(el, text, speed = 20) {
+    for (let char of text) {
+        el.innerHTML += char;
+        await new Promise(r => setTimeout(r, speed));
+        scrollChatToBottom();
+    }
+}
+
+async function sendMessage() {
+    const question = chatInput.value.trim();
+    if (!question || !selectedBook) return;
+
+    const userMsg = document.createElement("div");
+    userMsg.classList.add("chat-message", "user");
+    userMsg.innerHTML = `<b>You:</b> ${question}`;
+    chatBox.appendChild(userMsg);
+    chatInput.value = "";
+    scrollChatToBottom();
+
+    const typing = showTypingIndicator();
+
+    try {
+        const data = await api(`/api/chat?book=${encodeURIComponent(selectedBook.title)}&question=${encodeURIComponent(question)}`);
+        typing.remove();
+
+        const answer = data?.choices?.[0]?.message?.content || "Sorry, I couldn’t find an answer.";
+
+        const aiMsg = document.createElement("div");
+        aiMsg.classList.add("chat-message", "ai");
+        aiMsg.innerHTML = "<b>AI:</b> ";
+        chatBox.appendChild(aiMsg);
+
+        await typeText(aiMsg, " " + answer);
+    } catch {
+        typing.remove();
+        const errorMsg = document.createElement("div");
+        errorMsg.classList.add("chat-message", "ai");
+        errorMsg.style.color = "#b33";
+        errorMsg.innerHTML = `<b>Error:</b> Could not get a response.`;
+        chatBox.appendChild(errorMsg);
+        scrollChatToBottom();
+    }
 }
 
 chatInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && chatInput.value.trim() !== "" && selectedBook) {
-        const question = chatInput.value.trim();
-
-        const userMsg = document.createElement("div");
-        userMsg.classList.add("chat-message", "user");
-        userMsg.innerHTML = `<b>You:</b> ${question}`;
-        chatBox.appendChild(userMsg);
-        chatInput.value = "";
-        scrollChatToBottom();
-
-        const typingIndicator = showTypingIndicator();
-
-        fetch(`/api/chat?book=${encodeURIComponent(selectedBook.title)}&question=${encodeURIComponent(question)}`)
-            .then(r => r.json())
-            .then(data => {
-                typingIndicator.remove();
-
-                const answer = data?.choices?.[0]?.message?.content || "Sorry, I couldn’t find an answer.";
-                const aiMsg = document.createElement("div");
-                aiMsg.classList.add("chat-message", "ai");
-                aiMsg.innerHTML = "<b>AI:</b> ";
-                chatBox.appendChild(aiMsg);
-
-                typeWriterEffect(aiMsg, " " + answer);
-            })
-            .catch(err => {
-                typingIndicator.remove();
-                console.error("Fejl i chat:", err);
-                const errorMsg = document.createElement("div");
-                errorMsg.classList.add("chat-message", "ai");
-                errorMsg.style.color = "#b33";
-                errorMsg.innerHTML = `<b>Error:</b> Could not get a response.`;
-                chatBox.appendChild(errorMsg);
-                scrollChatToBottom();
-            });
-    }
+    if (e.key === "Enter") sendMessage();
 });
 
 loadBooks();

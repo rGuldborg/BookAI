@@ -1,6 +1,7 @@
 package com.example.bookai.dto;
 
 public class BookDTO {
+
     private String id;
     private String title;
     private String imageUrl;
